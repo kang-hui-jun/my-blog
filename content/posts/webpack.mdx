@@ -1,0 +1,119 @@
+---
+title: webpack搭建一个React项目
+description: 使用webpack搭建一个React Typescript项目.
+date: "2023-01-02"
+---
+
+## 依赖项
+
+首先使用npm安装依赖项
+
+- npm i webpack webpack-cli -D
+- npm i html-webpack-plugin -D
+- npm install webpack-merge -D
+- npm i webpack-dev-server -D
+- npm i typescript ts-loader -D
+- npm i react react-dom -S
+
+html-webpack-plugin 是一个 webpack 插件，可以简化 HTML 文件的创建来为您的 webpack 包提供服务。您可以让插件为您生成 HTML 文件、使用 lodash 模板提供您自己的模板或使用您自己的加载器。
+webpack-merge 用于代码分离，将开发环境与生产环境彼此独立配置。
+typescript ts-loader 是 typescript 编译器和loader，将TS代码转成JS代码。
+
+## webpack配置
+
+webpack.common.js，生产环境和开发环境公用的配置。
+
+
+```js
+// 生产环境和开发环境公用的配置
+
+const path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const ProgressBarPlugin = require("progress-bar-webpack-plugin");
+
+module.exports = {
+  entry: "./src/index.tsx",
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: "./public/index.html",
+    }),
+    new ProgressBarPlugin(),
+  ],
+  output: {
+    filename: "[name].bundle.js",
+    path: path.resolve(__dirname, "../dist"),
+    clean: true,
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: "ts-loader",
+        exclude: /node_modules/,
+      },
+    ],
+  },
+};
+```
+
+webpack.dev.js，开发环境的配置。
+
+```js
+// 开发环境
+
+const { merge } = require("webpack-merge");
+const common = require("./webpack.common");
+
+module.exports = merge(common, {
+  mode: "development",
+  devtool: "inline-source-map",
+  devServer: {
+    port: "3000",
+  },
+});
+```
+
+webpack.prod.js，生产环境的配置。
+
+```js
+// 生产环境
+
+const { merge } = require("webpack-merge");
+const common = require("./webpack.common.js");
+
+module.exports = merge(common, {
+  mode: "production",
+  devtool: 'source-map',
+});
+```
+
+## 文件目录
+
+<Image src="/webpack.png" width="255" height="287" alt="Image" />
+
+## 入口文件代码
+
+```js
+// index.tsx
+import React from "react";
+import { createRoot } from "react-dom/client";
+
+const root = createRoot(document.getElementById("root") as HTMLDivElement);
+
+root.render(<h1>hello, webpack</h1>);
+
+```
+
+## 添加npm scripts快捷方式
+
+在 package.js 文件中添加 npm script 以设置一个快捷方式：
+
+```json
+"scripts": {
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "start": "webpack server --config ./config/webpack.dev.js",
+  "build": "webpack --config ./config/webpack.prod.js"
+},
+```
+- 执行 npm start 启动开发环境
+- 执行 npm run build 打包生产环境代码

@@ -1,0 +1,104 @@
+---
+title: this指向
+description: 彻底搞懂JavaScript中的this指向问题.
+date: "2023-02-02"
+---
+
+this 的指向大致可以分为下面四种：
+
+- 作为对象的方法调用。
+- 作为普通函数调用
+- 构造器调用
+- Function.prototype.call 或者 Function.prototype.apply 调用。
+
+## 作为对象的方法调用
+
+当函数作为对象的方法调用时，this 指向这个对象：
+
+```js
+const obj = {
+  a: 1,
+  getA() {
+    console.log(this === obj); // true
+    console.log(this.a); // 1
+  },
+};
+```
+
+要注意，如果 getA 是箭头函数的话，this 指向 window，箭头函数没有自己的 this，它会继承外部作用域的 this 值。
+
+```js
+const obj = {
+  a: 1,
+  getA: () => {
+    console.log(this === obj); // false
+    console.log(this); // 指向window对象
+  },
+};
+```
+
+## 作为普通函数调用
+
+当函数不作为对象的属性被调用时，此时的 this 指向全局对象，在浏览器的 JavaScript 里，全局对象是 window，在 Node 环境中，全局对象是 global :
+
+```js
+window.name = "globalName";
+const getName = function () {
+  return this.name;
+};
+
+console.log(getName()); // globalName
+```
+
+## 构造器调用
+
+JavaScript 中没有类，但是可以从构造函数中创建对象，通过 new 运算符调用函数时，会返回一个对象，通常情况下，构造器里的 this 就指向这个返回的对象：
+
+```js
+const MyClass = function() {
+    this.name = '张三';
+    return {
+        name: '李四';
+    }
+}
+
+const obj = new MyClass();
+console.log(obj.name); // 李四
+```
+
+上面的代码打印输出 李四 ，因为构造函数返回了一个对象，如果构造函数不显示地返回任何数据，或者返回一个非对象类型的数据，就不会造成上面的问题：
+
+```js
+const MyClass = function () {
+  this.name = "张三";
+  return "李四";
+};
+
+const obj = new MyClass();
+console.log(obj.name); // 李四
+```
+
+## Function.prototype.call 或者 Function.prototype.apply 调用
+
+跟普通函数调用相比，Function.prototype.call 或 Function.prototype.apply 可以动态地改变 this 的指向：
+
+```js
+const obj1 = {
+  name: "张三",
+  getName() {
+    return this.name;
+  },
+};
+
+const obj2 = {
+  name: "李四",
+  getName() {
+    return this.name;
+  },
+};
+
+console.log(obj1.getName()); // 张三
+console.log(obj1.getName.call(obj2)); //李四
+```
+
+call 和 apply 方法能很好地体现 JavaScript 的函数式语言特性，每一次编写函数式风格的代码，都离不开 call 和 apply。

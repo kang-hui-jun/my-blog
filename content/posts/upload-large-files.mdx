@@ -1,0 +1,176 @@
+---
+title: 大文件分片上传
+description: 使用大文件分片技术提升性能和用户体验.
+date: "2023-06-10"
+---
+
+使用大文件分片技术可以改善前端应用程序处理大文件时的性能和用户体验，特别是在网络条件不佳的情况下。
+
+## 文件切片
+
+使用 JavaScript 将大文件分割成多个小块，通过使用 File Api 中的 Blob 对象来实现，Blob 对象表示一个不可变的、原始数据的类文件对象，可以通过 File 对象的 slice 方法来将文件切割成指定大小的块。
+
+```js
+const fileInput = document.getElementById("fileInput"); // 获取上传文件的input元素
+const file = fileInput.files[0]; // 获取用户选择的文件
+const chunkSize = 1024 * 1024; // 指定每一块的大小为 1MB
+
+let start = 0;
+let end = Math.min(chunkSize, file.size);
+
+while (start < file.size) {
+  const chunk = file.slice(start, end); // 从文件中切割出一块
+}
+```
+
+## 上传分片
+
+使用 Ajax 或者其它网络请求方法将这些分片上传到服务器。
+
+```js
+uploadChunk(chunk, start, end, file.size); // 上传切割出来的这个块
+start = end;
+end = Math.min(start + chunkSize, file.size);
+```
+
+## 服务器端重组
+
+在服务器端，接收到文件分片后，需要将这些分片重新组合成原始文件，可以通过一些标记或索引来确定哪些分片属于同一个文件，并将它们合并成完整的文件。
+
+```js
+const express = require("express");
+const formidable = require("formidable"); // 用于文件上传和解析
+const fs = require("fs");
+
+const app = express();
+const port = 3000;
+
+// 设置静态文件目录
+app.use(express.static("public"));
+
+// 处理文件上传请求
+app.post("/upload", (req, res) => {
+  const form = new formidable.IncomingForm();
+
+  form.parse(req, (err, fields, files) => {
+    if (err) {
+      console.error("解析期间发生错误:", err);
+      res.status(500).json({ error: "服务器内部异常" });
+      return;
+    }
+
+    // 保存上传的文件块
+    const chunkPath = `./uploads/${fields.filename}_${fields.start}-${fields.end}`;
+    fs.rename(files.chunk.path, chunkPath, (err) => {
+      if (err) {
+        console.error("文件块保存期间发生错误:", err);
+        res.status(500).json({ error: "服务器内部异常" });
+        return;
+      }
+      res.json({ message: "文件块上传成功" });
+    });
+  });
+});
+
+// 合并文件块
+app.post("/merge", (req, res) => {
+  const filename = req.body.filename;
+  const totalSize = parseInt(req.body.totalSize);
+  const chunkSize = parseInt(req.body.chunkSize);
+  const numberOfChunks = Math.ceil(totalSize / chunkSize);
+
+  let mergedChunks = "";
+
+  for (let i = 0; i < numberOfChunks; i++) {
+    const chunkPath = `./uploads/${filename}_${i * chunkSize}-${Math.min(
+      (i + 1) * chunkSize - 1,
+      totalSize - 1
+    )}`;
+    mergedChunks += fs.readFileSync(chunkPath);
+  }
+
+  // 保存合并后的文件
+  fs.writeFile(`./uploads/${filename}`, mergedChunks, (err) => {
+    if (err) {
+      console.error("文件合并时出错:", err);
+      res.status(500).json({ error: "服务器内部异常" });
+      return;
+    }
+    res.json({ message: "文件合并成功" });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`服务器正在运行 http://localhost:${port}`);
+});
+```
+
+## 进度追踪
+
+在上传或处理过程中，可以通过监听上传进度事件或其他相关事件来实现进度追踪，并将进度信息反馈给用户，让用户了解操作的进展情况。
+
+```js
+// 计算并更新上传进度
+const progress = Math.min((end / totalSize) * 100, 100);
+document.getElementById("progress").innerText = `已上传: ${progress.toFixed(
+  2
+)}%`;
+// 如果上传已经完成，执行额外的逻辑
+if (end >= totalSize) {
+  document.getElementById("progress").innerText = `上传完成!`;
+  // 这里可以执行一些额外的逻辑，比如显示上传完成的消息或者重定向到其他页面
+}
+```
+
+## 错误处理
+
+在分片上传或者处理过程中可能会出现各种错误，例如网络中断、服务器错误等，需要适当的错误处理机制来处理这些情况，并且向用户提供反馈
+
+```html
+<input type="file" id="fileInput" />
+<button onclick="uploadFile()">上传</button>
+<div id="progress"></div>
+```
+
+```js
+function uploadChunk(chunk, start, end, totalSize) {
+  const formData = new FormData();
+  formData.append("chunk", chunk);
+  formData.append("start", start);
+  formData.append("end", end);
+  formData.append("totalSize", totalSize);
+
+  fetch("/upload", {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const progress = Math.min((end / totalSize) * 100, 100);
+      document.getElementById(
+        "progress"
+      ).innerText = `Uploaded: ${progress.toFixed(2)}%`;
+    })
+    .catch((error) => {
+      console.error("Error occurred during upload:", error);
+    });
+}
+
+function uploadFile() {
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
+  const chunkSize = 1024 * 1024; // 1MB chunk size
+
+  let start = 0;
+  let end = Math.min(chunkSize, file.size);
+
+  while (start < file.size) {
+    const chunk = file.slice(start, end);
+    uploadChunk(chunk, start, end, file.size);
+    start = end;
+    end = Math.min(start + chunkSize, file.size);
+  }
+}
+```
