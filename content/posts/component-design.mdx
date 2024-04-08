@@ -1,12 +1,12 @@
 ---
 title: React组件设计
-description: React 设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案.
+description: React组件设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案.
 date: "2023-8-20"
 ---
 
-React 设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案。这些模式封装了针对重复出现的设计问题的可重用解决方案，从而提高了可维护性、可扩展性和效率。它们提供了一种结构化的方法来组织组件、管理状态、处理数据流和优化性能。
+React 组件设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案。这些模式封装了针对重复出现的设计问题的可重用解决方案，从而提高了可维护性、可扩展性和效率。它们提供了一种结构化的方法来组织组件、管理状态、处理数据流和优化性能。
 
-6 种 React 设计模式：
+6 种 React 组件设计模式：
 
 - 容器和呈现模式
 - HOC（高阶组件）模式
@@ -135,7 +135,7 @@ const UserProfileWithUserData = withUserData(UserProfile);
 const SocialMediaDashboard = () => {
   return (
     <div>
-      <h1>社交媒体仪表盘</h1>
+      <h1>Dashboard</h1>
       <UserProfileWithUserData />
     </div>
   );
@@ -161,38 +161,34 @@ const SocialMediaDashboard = () => {
 import React, { useState } from "react";
 
 // 保存复合组件的父组件
-const Toggle = (children) => {
+const Toggle = ({ children }) => {
   const [isOn, setIsOn] = useState(false);
 
-  consat toggle = () => {
-    setIsOn(prevIsOn => !prevIsOn)
-  }
+  const toggle = () => {
+    setIsOn((prevIsOn) => !prevIsOn);
+  };
 
   // 克隆子级并将切换状态的函数传递给它们
-  const childrenWithProps = React.Children.map(Children, child => {
+  const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      return React.cloneElement(Children, {isOn, toggle})
+      return React.cloneElement(child, { isOn, toggle });
     }
 
-    return child
-  })
+    return child;
+  });
 
-  return <div>{childrenWithProps}</div>
+  return <div>{childrenWithProps}</div>;
 };
 
 // 切换按钮的子组件
-const ToggleButton = ({isOn, toggle}) => {
-  return <button onClick={toggle}>
-  {
-    isOn ? '关闭' : '打开'
-  }
-  </button>
-}
+const ToggleButton = ({ isOn, toggle }) => {
+  return <button onClick={toggle}>{isOn ? "关闭" : "打开"}</button>;
+};
 
 // 切换状态的子组件
-const ToggleStatus = ({isOn}) => {
-  return <p>当前状态是：{isOn ? '关闭' : '打开'}</p>
-}
+const ToggleStatus = ({ isOn }) => {
+  return <p>当前状态是：{isOn ? "关闭" : "打开"}</p>;
+};
 
 // 使用复合组件
 const App = () => {
@@ -221,7 +217,7 @@ const App = () => {
 下面示例用于管理用户身份验证数据：
 
 ```js
-import React, { createContext, useState } from "react";
+import React, { createContext, useState, useContext } from "react";
 
 // 为用户数据创建上下文
 const UserContext = createContext();
@@ -360,51 +356,53 @@ const Dashboard = () => {
     });
   };
 
-  consat addNotification = text => {
-    const newNotification = {id: Date.now(), text}
+  const addNotification = (text) => {
+    const newNotification = { id: Date.now(), text };
     dispatch({
       type: ADD_NOTIFICATION,
-      payload: newNotification
-    })
-  }
+      payload: newNotification,
+    });
+  };
 
-  const deleteNotification = id => {
+  const deleteNotification = (id) => {
     dispatch({
       type: DELETE_NOTIFICATION,
-      payload: newNotification
-    })
-  }
+      payload: { id },
+    });
+  };
 
   return (
     <div>
-      <h1>社交媒体仪表盘</h1>
+      <h1>Dashboard</h1>
       <div>
         <h2>帖子</h2>
         <ul>
-          {state.posts.map(post => (
+          {state.posts.map((post) => (
             <li key={post.id}>
               {post.text}
               <button onClick={() => deletePost(post.id)}>删除</button>
             </li>
           ))}
         </ul>
-        <button onClick={() => addPost('新帖子')}>新增帖子</button>
+        <button onClick={() => addPost("新帖子")}>新增帖子</button>
       </div>
 
       <div>
         <h2>通知</h2>
         <ul>
-          {state.notifications.map(notification => (
+          {state.notifications.map((notification) => (
             <li key={notification.id}>
               {notification.text}
-              <button onClick={() => deleteNotification(notification.id)}>驳回</button>
+              <button onClick={() => deleteNotification(notification.id)}>
+                驳回
+              </button>
             </li>
           ))}
         </ul>
-        <button onClick={() => addNotification('新的通知')}>添加通知</button>
+        <button onClick={() => addNotification("新的通知")}>添加通知</button>
       </div>
     </div>
-  )
+  );
 };
 ```
 
@@ -425,100 +423,114 @@ const Dashboard = () => {
 ```js
 import React from "react";
 
-consat UserInfo = ({user}) => {
-  return <div className="user-info">
-    <img src={userInfo.profilePic} alt="Profile" />
-    <h3>{user.name}</h3>
-  </div>
-}
+const UserInfo = ({ user }) => {
+  return (
+    <div className="user-info">
+      <img src={user.profilePic} alt="Profile" />
+      <h3>{user.name}</h3>
+    </div>
+  );
+};
 
-const Feed = ({posts}) => {
-  return <div className="feed">
-    <h2>Feed</h2>
-    <ul>
-      {
-        posts.map((post, index) => (
+const Feed = ({ posts }) => {
+  return (
+    <div className="feed">
+      <h2>Feed</h2>
+      <ul>
+        {posts.map((post, index) => (
           <li key={index}>
             <h4>{post.title}</h4>
             <p>{post.content}</p>
           </li>
-        ))
-      }
-    </ul>
-  </div>
-}
+        ))}
+      </ul>
+    </div>
+  );
+};
 
-const Notifications = ({notifications}) => {
-  return <div className="notifications">
-    <h2>Notifications</h2>
-    <ul>
-      {notifications.map((notification, index) => (
-        <li key={index}>
-          <p>{notification}</p>
-        </li>
-      ))}
-    </ul>
-  </div>
-}
+const Notifications = ({ notifications }) => {
+  return (
+    <div className="notifications">
+      <h2>Notifications</h2>
+      <ul>
+        {notifications.map((notification, index) => (
+          <li key={index}>
+            <p>{notification}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 const Sidebar = () => {
-  return <div className="sidebar">
-    <ul>
-      <li>首页</li>
-      <li>用户</li>
-      <li>留言</li>
-      <li>设置</li>
-    </ul>
-  </div>
-}
-
-const SocialMediaDashboard = ({userInfo, posts, notifications}) => {
-  return <div className="social-media-dashboard">
-    <UserInfo user={user} />
-    <div className="main-content">
-      <Feed posts={posts} />
-      <Notifications notifications={notifications} />
+  return (
+    <div className="sidebar">
+      <ul>
+        <li>首页</li>
+        <li>用户</li>
+        <li>留言</li>
+        <li>设置</li>
+      </ul>
     </div>
-    <Sidebar />
-  </div>
-}
+  );
+};
+
+const SocialMediaDashboard = ({ user, posts, notifications }) => {
+  return (
+    <div className="social-media-dashboard">
+      <UserInfo user={user} />
+      <div className="main-content">
+        <Feed posts={posts} />
+        <Notifications notifications={notifications} />
+      </div>
+      <Sidebar />
+    </div>
+  );
+};
 
 const App = () => {
   const user = {
     name: "张三",
-    profilePic: 'http://localhosta:3000/100'
+    profilePic: "http://localhosta:3000/100",
   };
 
   const posts = [
     {
       title: "post 1",
-      content: 'Content 1'
-    },{
+      content: "Content 1",
+    },
+    {
       title: "post 2",
-      content: 'Content 2'
-    },{
+      content: "Content 2",
+    },
+    {
       title: "post 3",
-      content: 'Content 3'
-    },{
+      content: "Content 3",
+    },
+    {
       title: "post 4",
-      content: 'Content 4'
+      content: "Content 4",
     },
   ];
 
   const notifications = [
     "你有一个好友请求",
     "你的帖子已被点赞",
-    "你有一条消息"
+    "你有一条消息",
   ];
 
   return (
-    <h1>Dashboard</h1>
+    <div>
+      <h1>Dashboard</h1>
       <SocialMediaDashboard
-        user={user} posts={posts}
+        user={user}
+        posts={posts}
         notifications={notifications}
       />
-  )
-}
+    </div>
+  );
+};
 ```
 
 - 单独的组件 UserInfo，Feed，Notifications 和 Sidebar，每个组件负责呈现 Dashboard 对应的地方
