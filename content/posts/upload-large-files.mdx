@@ -11,16 +11,23 @@ date: "2023-06-10"
 使用 JavaScript 将大文件分割成多个小块，通过使用 File Api 中的 Blob 对象来实现，Blob 对象表示一个不可变的、原始数据的类文件对象，可以通过 File 对象的 slice 方法来将文件切割成指定大小的块。
 
 ```js
-const fileInput = document.getElementById("fileInput"); // 获取上传文件的input元素
-const file = fileInput.files[0]; // 获取用户选择的文件
-const chunkSize = 1024 * 1024; // 指定每一块的大小为 1MB
-
-let start = 0;
-let end = Math.min(chunkSize, file.size);
-
-while (start < file.size) {
-  const chunk = file.slice(start, end); // 从文件中切割出一块
-}
+const createChunk = (file, index, chunkSize) => {
+  return new Promise((resolve) => {
+    const start = index * chunkSize;
+    const end = start + chunkSize;
+    const fileReader = new FileReader();
+    const blob = file.slice(start, end);
+    fileReader.onload = (e) => {
+      resolve({
+        start,
+        end,
+        index,
+        blob,
+      });
+    };
+    fileReader.readAsArrayBuffer(blob);
+  });
+};
 ```
 
 ## 上传分片
@@ -28,9 +35,26 @@ while (start < file.size) {
 使用 Ajax 或者其它网络请求方法将这些分片上传到服务器。
 
 ```js
-uploadChunk(chunk, start, end, file.size); // 上传切割出来的这个块
-start = end;
-end = Math.min(start + chunkSize, file.size);
+const uploadChunk = async (chunk) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", chunk.blob);
+    formData.append("start", chunk.start);
+    formData.append("end", chunk.end);
+    formData.append("index", chunk.index);
+
+    const response = await fetch("http://localhost:3000/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("上传块失败");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
 ```
 
 ## 服务器端重组
@@ -39,69 +63,93 @@ end = Math.min(start + chunkSize, file.size);
 
 ```js
 const express = require("express");
-const formidable = require("formidable"); // 用于文件上传和解析
+const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
-// 设置静态文件目录
-app.use(express.static("public"));
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
+});
 
-// 处理文件上传请求
-app.post("/upload", (req, res) => {
-  const form = new formidable.IncomingForm();
+// 创建一个 Multer 实例来处理文件上传
+const upload = multer({ dest: "uploads/" });
 
-  form.parse(req, (err, fields, files) => {
+// 存储分片信息的对象
+const uploadedChunks = {};
+
+// 处理客户端上传的文件分片
+app.post("/upload", upload.single("file"), (req, res) => {
+  const start = parseInt(req.body.start);
+  const end = parseInt(req.body.end);
+  const index = parseInt(req.body.index);
+  const file = req.file;
+
+  // 读取分片的内容并将其追加到已保存的文件末尾
+  fs.readFile(file.path, (err, data) => {
     if (err) {
-      console.error("解析期间发生错误:", err);
-      res.status(500).json({ error: "服务器内部异常" });
-      return;
+      console.error(err);
+      return res.status(500).send("读取分片数据失败");
     }
 
-    // 保存上传的文件块
-    const chunkPath = `./uploads/${fields.filename}_${fields.start}-${fields.end}`;
-    fs.rename(files.chunk.path, chunkPath, (err) => {
-      if (err) {
-        console.error("文件块保存期间发生错误:", err);
-        res.status(500).json({ error: "服务器内部异常" });
-        return;
-      }
-      res.json({ message: "文件块上传成功" });
-    });
+    // 将接收到的分片追加到已保存的文件末尾
+    const chunkFilePath = path.join(
+      __dirname,
+      `uploads/${file.originalname}.${index}`
+    );
+    fs.appendFileSync(chunkFilePath, data);
+
+    console.log(`Chunk ${index} saved as ${chunkFilePath}`);
+
+    // 将分片信息存储到 uploadedChunks 中
+    uploadedChunks[index] = {
+      start,
+      end,
+      path: chunkFilePath,
+    };
+
+    // 如果是最后一个分片，发送成功响应
+    if (end >= file.size) {
+      console.log("收到所以分片");
+      return res.send("分片上传成功");
+    }
+
+    // 否则，继续等待下一个分片
+    res.send("收到分片");
   });
 });
 
-// 合并文件块
-app.post("/merge", (req, res) => {
-  const filename = req.body.filename;
-  const totalSize = parseInt(req.body.totalSize);
-  const chunkSize = parseInt(req.body.chunkSize);
-  const numberOfChunks = Math.ceil(totalSize / chunkSize);
+// 合并文件分片
+consat mergeChunks = (outputFilePath) => {
+  // 创建可写流
+  const writeStream = fs.createWriteStream(outputFilePath);
 
-  let mergedChunks = "";
-
-  for (let i = 0; i < numberOfChunks; i++) {
-    const chunkPath = `./uploads/${filename}_${i * chunkSize}-${Math.min(
-      (i + 1) * chunkSize - 1,
-      totalSize - 1
-    )}`;
-    mergedChunks += fs.readFileSync(chunkPath);
-  }
-
-  // 保存合并后的文件
-  fs.writeFile(`./uploads/${filename}`, mergedChunks, (err) => {
-    if (err) {
-      console.error("文件合并时出错:", err);
-      res.status(500).json({ error: "服务器内部异常" });
-      return;
+  // 按索引顺序合并分片
+  Object.keys(uploadedChunks).sort((a, b) => parseInt(a) - parseInt(b)).forEach(key => {
+    const chunkInfo = uploadedChunks[key];
+    if (fs.existsSync(chunkInfo.path)) {
+      const chunkData = fs.readFileSync(chunkInfo.path);
+    writeStream.write(chunkData);
+    // 删除已合并的分片文件
+    fs.unlinkSync(chunkInfo.path);
     }
-    res.json({ message: "文件合并成功" });
   });
-});
 
-app.listen(port, () => {
-  console.log(`服务器正在运行 http://localhost:${port}`);
+  // 结束写入流
+  writeStream.end();
+
+  console.log('文件重组成功!');
+}
+
+app.listen(PORT, () => {
+  console.log(`服务器正在运行 http://localhost:${PORT}`);
 });
 ```
 
@@ -128,49 +176,71 @@ if (end >= totalSize) {
 
 ```html
 <input type="file" id="fileInput" />
-<button onclick="uploadFile()">上传</button>
-<div id="progress"></div>
 ```
 
 ```js
-function uploadChunk(chunk, start, end, totalSize) {
-  const formData = new FormData();
-  formData.append("chunk", chunk);
-  formData.append("start", start);
-  formData.append("end", end);
-  formData.append("totalSize", totalSize);
+const fileInput = document.getElementById("fileInput");
 
-  fetch("/upload", {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const progress = Math.min((end / totalSize) * 100, 100);
-      document.getElementById(
-        "progress"
-      ).innerText = `Uploaded: ${progress.toFixed(2)}%`;
-    })
-    .catch((error) => {
-      console.error("Error occurred during upload:", error);
-    });
-}
+const CHUNK_SIZE = 1024 * 1024 * 5;
 
-function uploadFile() {
-  const fileInput = document.getElementById("fileInput");
-  const file = fileInput.files[0];
-  const chunkSize = 1024 * 1024; // 1MB chunk size
+fileInput.onchange = async (e) => {
+  const file = e.target.files[0];
+  const chunks = await cutFile(file);
+  await uploadChunks(chunks);
+};
 
-  let start = 0;
-  let end = Math.min(chunkSize, file.size);
-
-  while (start < file.size) {
-    const chunk = file.slice(start, end);
-    uploadChunk(chunk, start, end, file.size);
-    start = end;
-    end = Math.min(start + chunkSize, file.size);
+const cutFile = async (file) => {
+  const chunkCount = Math.ceil(file.size / CHUNK_SIZE);
+  const result = [];
+  for (let i = 0; i < chunkCount; i++) {
+    const chunk = await createChunk(file, i, CHUNK_SIZE);
+    result.push(chunk);
   }
-}
+  return result;
+};
+
+const createChunk = (file, index, chunkSize) => {
+  return new Promise((resolve) => {
+    const start = index * chunkSize;
+    const end = start + chunkSize;
+    const fileReader = new FileReader();
+    const blob = file.slice(start, end);
+    fileReader.onload = (e) => {
+      resolve({
+        start,
+        end,
+        index,
+        blob,
+      });
+    };
+    fileReader.readAsArrayBuffer(blob);
+  });
+};
+
+const uploadChunks = async (chunks) => {
+  for (const chunk of chunks) {
+    await uploadChunk(chunk);
+  }
+};
+
+const uploadChunk = async (chunk) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", chunk.blob);
+    formData.append("start", chunk.start);
+    formData.append("end", chunk.end);
+    formData.append("index", chunk.index);
+
+    const response = await fetch("http://localhost:3000/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("上传块失败");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
 ```
