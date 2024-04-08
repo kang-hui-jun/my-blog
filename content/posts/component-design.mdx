@@ -11,9 +11,9 @@ React 设计模式是开发人员用来解决使用 React 构建应用程序时�
 - 容器和呈现模式
 - HOC（高阶组件）模式
 - 复合组件模式
-- 提供者模式
-- 状态减速器模式
-- 组件组成模式
+- 状态管理模式
+- Reducer 模式
+- 组合组件模式
 
 ## 容器和呈现模式
 
@@ -23,7 +23,7 @@ React 设计模式是开发人员用来解决使用 React 构建应用程序时�
 
 看一个复杂的示例来说明这些模式：
 
-假设正在构建一个社交媒体仪表板，用户可以在其中查看朋友的帖子并与他们互动。 以下是构建组件的方式：
+假设正在构建一个 Dashboard，用户可以在其中查看朋友的帖子并与他们互动。 以下是构建组件的方式：
 
 ### 容器组件（FriendFeedContainer）：
 
@@ -151,4 +151,378 @@ const SocialMediaDashboard = () => {
 
 ## 复合组件模式
 
-----------未完待续---------
+复合组件模式允许你创建协同工作形成有凝聚力的 UI 组件，同时保持明确的关注点分离并且提供自定义组件行为和外观的灵活性。
+
+在这种模式下，父组件充当一个或者多个子组件的容器，这些子组件协同工作实现特定的功能或行为，复合组件的关键特征是它们通过父组件彼此共享状态和功能。
+
+下面是一个使用 hooks 在 React 中实现复合组件模式的简单示例：
+
+```js
+import React, { useState } from "react";
+
+// 保存复合组件的父组件
+const Toggle = (children) => {
+  const [isOn, setIsOn] = useState(false);
+
+  consat toggle = () => {
+    setIsOn(prevIsOn => !prevIsOn)
+  }
+
+  // 克隆子级并将切换状态的函数传递给它们
+  const childrenWithProps = React.Children.map(Children, child => {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(Children, {isOn, toggle})
+    }
+
+    return child
+  })
+
+  return <div>{childrenWithProps}</div>
+};
+
+// 切换按钮的子组件
+const ToggleButton = ({isOn, toggle}) => {
+  return <button onClick={toggle}>
+  {
+    isOn ? '关闭' : '打开'
+  }
+  </button>
+}
+
+// 切换状态的子组件
+const ToggleStatus = ({isOn}) => {
+  return <p>当前状态是：{isOn ? '关闭' : '打开'}</p>
+}
+
+// 使用复合组件
+const App = () => {
+  return (
+    <Toggle>
+      <ToggleStatus />
+      <ToggleButton />
+    </Toggle>
+  );
+};
+```
+
+在这个示例中：
+
+- Togggle 是保存复合组件（ToggleButton 和 ToggleStatus）的父组件
+- ToggleButton 是负责渲染切换按钮的子组件
+- ToggleStatus 是负责显示切换状态的子组件
+- Toggle 组件管理状态（isOn）并且提供切换功能来控制状态，它克隆子级并将状态和切换函数作为 props 传递给它们
+
+通过使用复合组件模式，可以创建可重用和可组合的组件，封装复杂的 UI 逻辑，同时仍然允许自定义和灵活性。
+
+## 使用 Provider 进行数据管理
+
+状态管理模式用于跨多个组件管理和共享应用程序状态，创建一个封装状态或数据的提供者组件，并通过 React 的上下文 API 将其提供给后代组件。
+
+下面示例用于管理用户身份验证数据：
+
+```js
+import React, { createContext, useState } from "react";
+
+// 为用户数据创建上下文
+const UserContext = createContext();
+
+// Provider组件
+const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+
+  // 用户登录的函数
+  const login = (userData) => {
+    setUser(userData);
+  };
+
+  // 用户退出登录的函数
+  const logout = () => {
+    setUser(null);
+  };
+
+  return (
+    <UserContext.Provider value={{ user, login, logout }} children={children} />
+  );
+};
+
+// 导出一个自定义hook给后代组件共享用户数据与身份验证相关的功能
+export const useAuth = () => {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error("useAuth必须在UserProvider后代组件中使用");
+  }
+  return context;
+};
+```
+
+在这个示例中：
+
+- 使用 createContext 函数创建一个 UserContext 上下文组件，用于跨组件共享用户数据与身份验证相关的功能
+- UserProvider 组件作为 UserContext 的提供者，该组件使用 useState 管理用户状态，并提供登录和退出登录的方法
+- 在 UserProvider 内部，使用 UserContext.Provider 包装子级，并且将用户状态以及登录和退出登录函数作为 value 传递
+- 现在任何需要访问用户数据或身份验证相关功能的组件都可以使用自定义 hook useAuth 来获取
+
+创建一个使用用户数据的组件：
+
+```js
+import React from "react";
+import { useAuth } from "./UserContext";
+
+const UserProfile = () => {
+  const { user, logout } = useAuth();
+
+  return (
+    <div>
+      {user ? (
+        <div>
+          <h2>{user.userName}</h2>
+          <button onClick={logout}>退出登录</button>
+        </div>
+      ) : (
+        <div>
+          <h2>未登录</h2>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+通过这种方式，允许我们跨多个组件管理和共享应用程序状态或数据，无需进行 prop 深层次传递，从而使代码更干净、更好维护。
+
+## Reducer 模式
+
+对于拥有许多状态更新逻辑的组件来说，过于分散的事件处理程序使用 Readucer 管理复杂的状态逻辑或需要在多个组件之间共享状态特别有用。
+
+下面的示例中，使用 Reducer 来管理用户帖子和通知的状态：
+
+```js
+import React, { useReducer } from "react";
+
+// action 类型
+const ADD_POST = "ADD_POST";
+const DELETE_POST = "DELETE_POST";
+const ADD_NOTIFICATION = "ADD_NOTIFICATION";
+const DELETE_NOTIFICATION = "DELETE_NOTIFICATION";
+
+// 编写一个reducer函数
+const dashboardReducer = (state, { type, payload }) => {
+  switch (type) {
+    case ADD_POST:
+      return {
+        ...state,
+        posts: [...state.posts, payload],
+      };
+
+    case DELETE_POST:
+      return {
+        ...state,
+        posts: state.posts.filter((post) => post.id !== payload.id),
+      };
+
+    case ADD_NOTIFICATION:
+      return {
+        ...state,
+        notifications: [...state.notifications, payload],
+      };
+
+    case DELETE_NOTIFICATION:
+      return {
+        ...state,
+        notifications: state.notifications.filter(
+          (notification) => notification.id !== payload.id
+        ),
+      };
+  }
+};
+
+const initialState = {
+  posts: [],
+  notifications: [],
+};
+
+const Dashboard = () => {
+  // 使用useReducer初始化状态
+  const [state, dispatch] = useReducer(dashboardReducer, initialState);
+
+  const addPost = (text) => {
+    const newPost = { id: Date.now(), text };
+    dispatch({
+      type: ADD_POST,
+      payload: newPost,
+    });
+  };
+
+  const deletePost = (id) => {
+    dispatch({
+      type: DELETE_POST,
+      payload: { id },
+    });
+  };
+
+  consat addNotification = text => {
+    const newNotification = {id: Date.now(), text}
+    dispatch({
+      type: ADD_NOTIFICATION,
+      payload: newNotification
+    })
+  }
+
+  const deleteNotification = id => {
+    dispatch({
+      type: DELETE_NOTIFICATION,
+      payload: newNotification
+    })
+  }
+
+  return (
+    <div>
+      <h1>社交媒体仪表盘</h1>
+      <div>
+        <h2>帖子</h2>
+        <ul>
+          {state.posts.map(post => (
+            <li key={post.id}>
+              {post.text}
+              <button onClick={() => deletePost(post.id)}>删除</button>
+            </li>
+          ))}
+        </ul>
+        <button onClick={() => addPost('新帖子')}>新增帖子</button>
+      </div>
+
+      <div>
+        <h2>通知</h2>
+        <ul>
+          {state.notifications.map(notification => (
+            <li key={notification.id}>
+              {notification.text}
+              <button onClick={() => deleteNotification(notification.id)}>驳回</button>
+            </li>
+          ))}
+        </ul>
+        <button onClick={() => addNotification('新的通知')}>添加通知</button>
+      </div>
+    </div>
+  )
+};
+```
+
+- 定义了表示可以在 Dashboard 组件的状态上执行的不同操作类型（ADD_POST，DELETE_POST，ADD_NOTIFICATION，DELETE_NOTIFICATION）
+- 定义了一个 reducer 函数，它接收当前状态和一个方法，并根据该方法返回新的状态
+- 使用了 useReducer 创建了一个状态和调用函数，通过 dispatch 来更新状态
+- 仪表盘组件包含用于添加和删除帖子和通知的逻辑，用来派发操作给 reducer
+- 用户可以通过点击相应的按钮来添加新帖子或者通知
+
+这个示例演示了如何在 React 中实现 Reducer 模式来管理社交媒体仪表盘的状态，包括帖子和通知，reducer 函数集中了状态管理逻辑，提升了代码的可读性。
+
+## 组合组件模式
+
+组合组件模式用来将更小的、更可重用的组件组合在一起创建复杂的组件或 UI，用 Dashboard 示例说明这种模式。
+
+假设我们有一个 Dashboard，由多个组件组成，例如 UserInfo、Feed、Notifications 和 Sidebar，我们可以将这些较小的组件组合在一起构建 Dashboard 组件。
+
+```js
+import React from "react";
+
+consat UserInfo = ({user}) => {
+  return <div className="user-info">
+    <img src={userInfo.profilePic} alt="Profile" />
+    <h3>{user.name}</h3>
+  </div>
+}
+
+const Feed = ({posts}) => {
+  return <div className="feed">
+    <h2>Feed</h2>
+    <ul>
+      {
+        posts.map((post, index) => (
+          <li key={index}>
+            <h4>{post.title}</h4>
+            <p>{post.content}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+}
+
+const Notifications = ({notifications}) => {
+  return <div className="notifications">
+    <h2>Notifications</h2>
+    <ul>
+      {notifications.map((notification, index) => (
+        <li key={index}>
+          <p>{notification}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+}
+
+const Sidebar = () => {
+  return <div className="sidebar">
+    <ul>
+      <li>首页</li>
+      <li>用户</li>
+      <li>留言</li>
+      <li>设置</li>
+    </ul>
+  </div>
+}
+
+const SocialMediaDashboard = ({userInfo, posts, notifications}) => {
+  return <div className="social-media-dashboard">
+    <UserInfo user={user} />
+    <div className="main-content">
+      <Feed posts={posts} />
+      <Notifications notifications={notifications} />
+    </div>
+    <Sidebar />
+  </div>
+}
+
+const App = () => {
+  const user = {
+    name: "张三",
+    profilePic: 'http://localhosta:3000/100'
+  };
+
+  const posts = [
+    {
+      title: "post 1",
+      content: 'Content 1'
+    },{
+      title: "post 2",
+      content: 'Content 2'
+    },{
+      title: "post 3",
+      content: 'Content 3'
+    },{
+      title: "post 4",
+      content: 'Content 4'
+    },
+  ];
+
+  const notifications = [
+    "你有一个好友请求",
+    "你的帖子已被点赞",
+    "你有一条消息"
+  ];
+
+  return (
+    <h1>Dashboard</h1>
+      <SocialMediaDashboard
+        user={user} posts={posts}
+        notifications={notifications}
+      />
+  )
+}
+```
+
+- 单独的组件 UserInfo，Feed，Notifications 和 Sidebar，每个组件负责呈现 Dashboard 对应的地方
+- 将这些较小的组件组合在 SocialMediaDashboard，从而创建整个 Dashboard UI
+- App 组件充当入口，将数据（用户信息，帖子，通知）通过 props 传递至 SocialMediaDashboard 组件
+
+这个例子演示了如何使用组合组件的模式通过较小的、可重用的组件组合在一起构建 Dashboard，每个组件都专注于 UI 的展示方面，提高可重用性和可维护性
