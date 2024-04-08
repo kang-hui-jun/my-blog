@@ -1,0 +1,154 @@
+---
+title: React组件设计
+description: React 设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案.
+date: "2023-8-20"
+---
+
+React 设计模式是开发人员用来解决使用 React 构建应用程序时遇到的常见问题和挑战的既定实践和解决方案。这些模式封装了针对重复出现的设计问题的可重用解决方案，从而提高了可维护性、可扩展性和效率。它们提供了一种结构化的方法来组织组件、管理状态、处理数据流和优化性能。
+
+6 种 React 设计模式：
+
+- 容器和呈现模式
+- HOC（高阶组件）模式
+- 复合组件模式
+- 提供者模式
+- 状态减速器模式
+- 组件组成模式
+
+## 容器和呈现模式
+
+在此模式中，容器组件负责管理数据和状态逻辑。 它们从外部源获取数据，在必要时对其进行操作，并将其作为 props 传递给展示组件。 它们通常连接到外部服务、Redux 存储或上下文提供者。
+
+另一方面，展示组件仅专注于 UI 元素的展示。 他们通过 props 从容器组件接收数据，并以视觉上吸引人的方式呈现它。 展示组件通常是无状态的功能组件或纯组件，这使得它们更容易测试和重用。
+
+看一个复杂的示例来说明这些模式：
+
+假设正在构建一个社交媒体仪表板，用户可以在其中查看朋友的帖子并与他们互动。 以下是构建组件的方式：
+
+### 容器组件（FriendFeedContainer）：
+
+该组件负责从服务器获取有关好友帖子的数据、处理数据的转换以及管理重要的姿态，它将相关数据传递给展示组件。
+
+```js
+import React, { useState, useEffect } from "react";
+import FriendFeed from "./FriendFeed";
+
+const FriendFeedContainer = () => {
+  const [friendPosts, setFriendPosts] = useState([]);
+
+  useEffect(() => {
+    const fetchFriendPosts = async () => {
+      const posts = await fetch("http://api.example.com/friend-posts");
+      const data = await posts.json();
+      setFriendPosts(data);
+    };
+    fetchFriendPosts();
+  }, []);
+
+  return <FriendFeed posts={friendPosts} />;
+};
+```
+
+### 展示组件（FriendFeed）：
+
+该组件将接收父容器组件（FriendFeedContainer）传递的好友帖子的数据作为 props。
+
+```js
+import React from "react";
+
+const FriendFeed = ({ posts }) => {
+  return (
+    <div>
+      <h2>好友动态</h2>
+      <ul>
+        {posts.map((post) => (
+          <li key={post.id}>
+            <p>{post.content}</p>
+            <p>发布者：{post.author}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default FriendFeed;
+```
+
+通过这种方式设计组件，将获取数据和管理状态与 UI 渲染分开，这种分离使 React 应用程序在拓展的时候可以更轻松地进行测试、维护和重用。
+
+## HOC（Higher Order Component）模式
+
+高阶组件允许你跨多个组件重用组件逻辑，是接受组件为参数并返回具有附加功能的新组件的函数。
+
+假设你有多个组件需要从 API 获取用户数据，你可以创建一个高阶组件来处理数据获取并将数据作为 props 传递给包装的组件，而不是在每个组件中重复获取，代码示例：
+
+```js
+import React, { useState, useEffect } from "react";
+
+// 定义高阶组件用于获取用户数据
+const withUserData = (WrappedComponent) => {
+  return (props) => {
+    const [userData, setUserData] = useState(null);
+
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const response = await fetch("http://api/example.com/user");
+          const data = await response.json();
+          setUserData(data);
+        } catch (error) {
+          console.log(error);
+        }
+      };
+
+      fetchData();
+    }, []);
+
+    return (
+      <div>
+        <WrappedComponent {...props} userData={userData} />
+      </div>
+    );
+  };
+};
+
+// 创建一个组件来显示用户数据
+const UserProfile = ({ userData }) => {
+  return (
+    <div>
+      <h2>用户数据</h2>
+      {userData && (
+        <div>
+          <p>姓名：{userData.name}</p>
+          <p>年龄：{userData.age}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 使用withUserData包装UserProfile组件
+const UserProfileWithUserData = withUserData(UserProfile);
+
+// 渲染包装后的组件
+const SocialMediaDashboard = () => {
+  return (
+    <div>
+      <h1>社交媒体仪表盘</h1>
+      <UserProfileWithUserData />
+    </div>
+  );
+};
+```
+
+- withUserData 是一个高阶组件，用于处理 API 获取用户数据，它包装传递的组件 WrappedComponent 并将获取的用户数据作为 prop 提供给它
+- UserProfile 是一个功能组件，它接收 userData 并显示用户数据
+- UserProfileWithUserData 是用 withUserData 包装 UserProfile 返回的新组件
+- SocialMediaDashboard 是渲染 UserProfileWithUserData 的组件
+
+使用高阶组件，可以轻松地应用程序中的多个组件重用数据获取逻辑，无需重复代码。
+
+## 复合组件模式
+
+----------未完待续---------
