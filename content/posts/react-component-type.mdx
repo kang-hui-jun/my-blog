@@ -1,0 +1,113 @@
+---
+title: React组件类型
+description: React的类型系统与TypeScript一起使用时，提供了安全的应用程序构建.
+date: "2023-7-13"
+---
+
+## React.FC 与 React.ElementType
+
+### React.FC（React.FunctionComponent）
+
+React.FC 是 React 中专门用于定义函数组件的类型，在 React18 之前，它包含一个隐式的 children prop，这个隐式 children prop 已经在 React18 的类型更改中被删除。
+
+```js
+interface SomeComponentProps {
+  title: string;
+  children?: React.ReactNode;
+}
+
+export const SomeComponent: React.Fc<SomeComponentProps> = ({
+  title,
+  children,
+}) => {
+  return (
+    <div>
+      <h1>{title}</h1>
+      <div>{children}</div>
+    </div>
+  );
+};
+```
+
+自从删除了隐式 children prop 类型后，现在基本上都是直接将接口分配给 props 对象。
+
+```js
+interface SomeComponentProps {
+  title: string;
+  children?: React.ReactNode;
+}
+
+export const SomeComponent = ({ title, children }: SomeComponentProps) => {
+  return (
+    <div>
+      <h1>{title}</h1>
+      <div>{children}</div>
+    </div>
+  );
+};
+```
+
+### React.ElementType
+
+React.ElementType 是一种更广泛的类型，表示可以由 React 呈现的任何组件类型，不仅包括 React 函数组件和类组件，还包括 HTML 元素的标签（例如“div”），当你想要接受组件作为 prop 并渲染的时候，React.ElementType 特别有用。
+
+```js
+const DynamicComponent: React.ElementType = "div";
+
+export const Container = () => (
+  <DynamicComponent className="container">Hello，React！</DynamicComponent>
+);
+```
+
+这里，DynamicComponent 的类型为 React.ElementType，允许将它动态分配给不同类型的组件或 HTML 元素。
+
+`React.FC 主要用于定义功能组件，从React18 开始，可以直接将接口分配给 props 对象`
+`React.ElementType 在接受各种可渲染实体方面提供了更大的灵活性，当你需要可以动态接受不同类型的 React 组件或 HTML 元素的时候使用`
+
+## React.ReactNode vs React.ReactElement vs JsxEmit.Element
+
+### React.ReactElement
+
+React.ReactElement 是一个具有 type、props 和 key 属性的对象，由 React.createElement() 函数创建，与 React.ReactNode 相比，它是一种更具体的类型，表示可以由 React 直接渲染的元素。
+
+```js
+const elementContent: React.ReactElement = (
+  <div>Hello, React.ReactElement！</div>
+);
+
+export const Container = () => <>{elementContent}</>;
+```
+
+### React.ReactNode
+
+React.ReactNode 是最具包容性的类型，代表可以由 React 渲染的东西，包括（字符串、数字、布尔值）、JSX.Elements、React.ReactElements 这些类型的数组等等。
+
+```js
+const multiElementContent: React.ReactNode = <div>{"这是一个文本节点"}</div>;
+
+const primitiveTypeContent: React.ReactNode =
+  "这是一个原始类型的React.ReactNode";
+
+export const Container = () => {
+  return (
+    <>
+      {multiElementContent}
+      {primitiveTypeContent}
+    </>
+  );
+};
+```
+
+### JSX.Element
+
+JSX.Element 是一个具有更广泛定义的 React.ReactElement，允许各种库以自己的方式实现 JSX，它是 TypeScript 内部使用的类型，用于表示 JSX 表达式的返回类型。
+
+```js
+const jsxElement: JSX.Element = <span>Hello, JSX.Element！</span>;
+
+export const Container = () => <>{jsxElement}</>;
+```
+
+`React.ReactNode 是最灵活、最具包容性的，适合接受多样化内容的 props`
+`React.ReactElement  适用于 React 创建的元素，JSX.Element 适用于 JSX 语法定义的元素`
+
