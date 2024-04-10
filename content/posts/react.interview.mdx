@@ -1,0 +1,316 @@
+---
+title: ReactJS面试题
+description: ReactJS 开发中的关键概念和最佳实践.
+date: "2023-02-02"
+---
+
+## ReatcJS 是什么以及它是如何工作的？
+
+React 是一个功能强大的 JavaScript 库，用于构建交互式用户界面。
+
+ReactJS 的运行原理是声明式和基于组件的方法，这些组件是小型的独立单元，可以组合在一起构建复杂的用户界面。
+
+当 React 应用程序运行时，它会在内存中创建用户界面的虚拟表示，称为虚拟 DOM。Virtual DOM 是一个轻量级 JavaScript 对象，包含实际 DOM 元素的所有属性和属性。这是一个在内存中保留 UI 的理想表示并将其与实际 DOM 同步的编程概念。
+当 React 组件的 state 或 props 发生变化时，React 会创建一个新的 VDOM 树。
+VDOM 与 React 的协调算法相结合，计算新的和以前的 VDOM 表示之间的差异。
+然后，它仅更新实际 DOM 中已更改的部分，从而最大限度地减少整页刷新的需要并提高性能。
+
+## Shadow DOM 和 Virtual DOM 有什么区别？解释和解过程。
+
+虚拟 DOM：它是库在内存中保存的实际 DOM（文档对象模型）的轻量级副本。当对虚拟 DOM 进行更改时，库会计算更新实际 DOM 的最有效方法，并且仅进行这些特定更改，而不是重新渲染整个 DOM。
+
+Shadow DOM：Shadow DOM 专注于封装 Web 组件的样式和结构。它是一种浏览器技术，主要用于在 Web 组件中确定变量和 CSS 的范围。
+
+以便其内部实现对页面的其余部分隐藏。它允许您创建具有自己的样式和标记的独立组件，这些组件不会干扰页面其余部分的样式或行为。
+
+协调：这是 React 更新浏览器 DOM 并使 React 工作得更快的过程。React 使用 diff 算法，以便组件更新可预测且更快。
+
+当我们进行更改或添加数据时，React 会创建一个新的 Virtual DOM 并将其与前一个进行比较。
+
+这种比较是通过 Diffing 算法完成的。现在 React 将 Virtual DOM 与 Real DOM 进行比较。它找出已更改的节点并仅更新 Real DOM 中已更改的节点，其余节点保持原样。
+
+## 元素和组件有什么区别？
+
+React 中的 Element 是一个普通对象，描述组件实例或 DOM 节点及其所需的属性，也称为 props。元素是 React 应用程序的最小构建块，通常使用 JSX 创建，JSX 是 JavaScript 的语法扩展。
+
+```js
+
+const element = React.createElement("h1");
+
+//  返回一个对象:
+{
+  type: 'h1',
+  props: {}
+}
+```
+
+另一方面，组件是可重用的 UI 部分，可以由一个或多个元素组成。React 中的组件可以是函数组件，也可以是类组件。它们封装了渲染和行为的逻辑，并且可以接受输入数据并维护内部状态。
+
+```js
+const App = () => {
+  return <div>Hello World！</div>;
+};
+
+export default App;
+```
+
+## reactjs 中的 state 和 props 是什么？
+
+state 用于管理组件的内部数据及其随时间的变化。状态是可变的，可以使用 setState 方法进行更新。状态更改可以是异步的。
+
+```js
+import React, { useState } from "react";
+
+const Button = () => {
+  const [count, setCount] = useState(0);
+
+  const updateCount = () => {
+    setCount((prevCount) => prevCount + 1);
+  };
+
+  return <button onClick={updateCount}>click {count}</button>;
+};
+```
+
+props 是一种将数据从父组件传递到子组件的机制。它们是只读的（不可变的），有助于使组件可重用和可定制。
+
+props 作为属性传递给组件，并且可以使用类组件中的 this.props 在组件内进行访问，或者作为函数组件的参数进行访问。
+
+## 什么是纯组件和 React.memo()？
+
+部分 JavaScript 函数是 纯粹 的，这类函数通常被称为纯函数。纯函数仅执行计算操作，不做其他操作。
+
+纯函数通常具有如下特征：
+
+- 只负责自己的任务。它不会更改在该函数调用前就已存在的对象或变量
+- 输入相同，则输出相同。给定相同的输入，纯函数应总是返回相同的结果
+
+假设你编写的所有组件都是纯函数。也就是说，对于相同的输入，你所编写的 React 组件必须总是返回相同的 JSX。
+
+```js
+import React from "react";
+
+const User = ({ name }) => {
+  return (
+    <ul>
+      <li>姓名：{name}</li>
+    </ul>
+  );
+};
+
+const App = () => {
+  return <User user={"张三"} />;
+};
+```
+
+当你给函数 User 传入 "张三" 参数时，它将返回包含 姓名：张三 的 JSX。永远如此。
+
+React.memo() 是一个高阶组件，允许你的组件在 props 没有改变的情况下跳过重新渲染。
+
+当处理接收相同 props 但不需要在每次更改时重新渲染的组件时，这尤其有用。
+
+```js
+import React from "react";
+import TodoItem from "./TodoItem";
+
+const Todo = React.memo(({ list }) => {
+  return (
+    <ul>
+      {list.map((item) => (
+        <TodoItem key={item.id} item={item} />
+      ))}
+    </ul>
+  );
+});
+export default Todo;
+```
+
+如果组件很轻并且使用多个 props 渲染，请避免使用 React Memo。
+
+## React 中什么是合成事件？
+
+合成事件是浏览器事件系统的跨浏览器包装器。它们旨在确保不同浏览器和设备之间的行为和性能一致。
+
+它们提供了统一的 API 来处理 React 中的事件，无论浏览器如何。
+
+要在 React 中使用合成事件，您只需向组件添加事件处理程序即可。事件处理程序将传递 SyntheticEvent 对象的实例。
+
+SyntheticEvent 是 React 中用于处理事件的虚拟事件对象。在 React 应用中，事件处理器（比如 onClick、onChange 等）会接收到一个 SyntheticEvent 对象作为参数。这个对象在底层是由 React 实现的，用于封装浏览器原生的事件对象，并提供跨浏览器兼容性和其他额外的功能。
+
+SyntheticEvent 对象的设计目的是提供一个统一的事件处理接口，使得在不同浏览器和环境下开发 React 应用时更加一致和可靠。
+
+```js
+const handleClick = (e) => {
+  console.log(e);
+};
+
+<button onClick={handleClick}>点击</button>;
+```
+
+在这个示例中，点击按钮时，handleClick 函数将传递 SyntheticEvent 对象的实例，然后 handleClick 函数可以拿到 SyntheticEvent 对象的属性和方法。
+
+## 什么是无状态组件和有状态组件？
+
+无状态组件是一种 React 组件，它被定义为纯 JavaScript 函数，并且表示没有内部状态管理的 UI 元素。
+
+这些组件不管理自己的状态，它们只是接收 props 并将其呈现给用户界面，无状态组件通常用于静态组件，其中所呈现的数据不需要更新。
+
+```js
+import React from "react";
+
+const User = ({ name }) => {
+  return (
+    <ul>
+      <li>姓名：{name}</li>
+    </ul>
+  );
+};
+```
+
+有状态组件用于管理状态、处理用户交互以及实现复杂的 UI 逻辑。
+
+当数据随时间发生变化时，需要有状态组件，并且组件需要了解更新才能呈现它。他们能够使用 setState 方法修改状态。
+
+```js
+import React, { useState } from "react";
+
+const Button = () => {
+  const [count, setCount] = useState(0);
+
+  const updateCount = () => {
+    setCount((prevCount) => prevCount + 1);
+  };
+
+  return <button onClick={updateCount}>click {count}</button>;
+};
+```
+
+## 为什么需要异步更新状态？
+
+React 将状态更新视为异步操作，并且会对连续的状态更新进行批处理。当调用 setState 方法时，React 将更新状态的请求放入队列中，并在适当的时机（例如下一个事件循环或浏览器重绘之前）批量处理这些更新，以提高性能并减少不必要的重渲染。如果直接修改状态，可能会导致不可预料的结果，因为 React 可能不会及时更新组件。
+
+当使用 setState 方法进行状态更新时，React 会自动合并新的状态对象与当前状态对象，并进行浅合并。这意味着您只需要传递要更新的状态的部分即可，而不需要复制整个状态对象。如果直接修改状态对象，则可能会覆盖掉其他状态属性，导致状态丢失或不一致。
+
+React 使用一些优化策略来决定何时重新渲染组件。通过将状态更新视为异步操作，并对连续的更新进行批处理，React 可以更好地优化更新流程，从而提高性能和用户体验。如果直接更新状态，可能会导致不必要的重渲染和性能下降。
+
+React 推崇单向数据流的思想，即数据从顶层组件向下传递，并通过 props 传递给子组件。通过使用 setState 方法进行状态更新，可以确保数据流的一致性，从而使得组件的状态和 UI 始终保持同步。
+
+## refs 有什么用，React.createRef 和 useRef hook 是什么？
+
+在 React 中，refs 是用于获取组件或 DOM 元素引用的方式。它们允许我们直接访问 React 元素或 DOM 元素，并在需要时进行操作。refs 主要用于以下几个方面：
+
+- 访问子组件或 DOM 元素
+- 处理焦点、文本选择和媒体控制
+- 集成第三方库
+
+React.createRef() 和 useRef() 都是用于创建 refs 的方法，它们允许我们在 React 组件中直接访问和操作组件实例或 DOM 元素。React.createRef() 主要用于类组件，而 useRef() 则用于函数组件和自定义 hook 中。
+
+```js
+class MyComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.myRef = React.createRef();
+  }
+
+  render() {
+    return <div ref={this.myRef}>Hello, world!</div>;
+  }
+}
+
+const MyComponent = () => {
+  const myRef = useRef();
+
+  return <div ref={myRef}>Hello, world!</div>;
+};
+```
+
+## 什么是 React Fiber？
+
+Fiber 架构是 React 16 中引入的一种新的协调算法，用于管理 React 应用中的组件更新和渲染。Fiber 架构的设计目标是提高 React 应用的性能和可交互性，并且支持异步渲染和增量更新，从而使得 React 应用能够更加平滑地响应用户操作。
+
+主要的特点和原理：
+
+- 可中断的异步渲染：Fiber 允许 React 应用将渲染工作分割成小块，并且可以在渲染过程中中断和恢复，从而提高应用的响应速度和流畅度，这种异步渲染的机制可以使 React 应用在高负载的情况下更加稳定，避免阻塞主线程
+- 增量更新：将更新过程分割成多个步骤，每个步骤都可以被中断和恢复，这种方式可以使 React 应用在每个渲染周期中优先处理用户交互事件，并且在空闲时间执行剩余的更新工作，从而提高应用的交互性和响应速度
+- 优先级调度：可以根据任务的优先级来调度任务的执行顺序，这种机制可以使 React 应用在处理用户交互事件时优先渲染重要的部分，从而提高应用的交互性和用户体验
+- 并法模式：可以同时处理多个任务，从而提高应用的并法性能，这种并法模式的设计可以使 React 应用在多核处理器上更加高效的利用资源，并且在处理大量任务时保持良好的响应速度
+
+### Fiber 树
+
+Fiber 树是由 Fiber 节点组成的树形结构，用于描述 React 应用的组件结构和渲染过程，每个 Fiber 节点都代表一个组件或 DOM 元素，包含了组件的类型、props、state 等信息，并且可以记录组件的更新状态和渲染优先级
+
+## 什么是受控组件和非受控组件？
+
+在 React 中，组件可以分为两种类型：受控组件和非受控组件，它们之间的区别在于组件的 state 如何管理和更新。
+
+受控组件是指其表单元素的值（例如 input、textarea、select 等）受到 React 组件的 state 控制，并且通过事件处理器（如 onChange）更新状态。
+
+当用户输入数据时，表单元素的值会更新 React 组件的状态，而 React 组件的状态也会更新表单元素的值，从而保持状态和 UI 的同步。
+
+```js
+const ControlledInput = () => {
+  const [value, setValue] = useState("");
+
+  const handleChange = (e) => {
+    setValue(e.target.value);
+  };
+
+  return <input type="text" value={value} onChange={handleChange} />;
+};
+```
+
+非受控组件是指其表单元素的值不受 React 组件的状态控制，而是由 DOM 元素自身管理。
+
+在非受控组件中，表单元素的值由 DOM 元素自身管理，并且通常使用 ref 属性来获取表单元素的值。
+
+React 组件不会直接管理表单元素的值，而是在需要时从 DOM 元素中获取值，例如在提交表单时。
+
+```js
+class UncontrolledInput extends React.Component {
+  handleSubmit = (event) => {
+    event.preventDefault();
+    console.log(this.inputRef.value);
+  };
+
+  render() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <input type="text" ref={(input) => (this.inputRef = input)} />
+        <button type="submit">提交</button>
+      </form>
+    );
+  }
+}
+```
+
+受控组件适用于需要对输入数据进行验证、处理和转换的情况，而非受控组件适用于简单的表单和需要与第三方库集成的情况。
+
+## 优化 React 应用有哪些方法
+
+可以从多个方面入手，包括性能优化、代码优化和组件优化等。
+
+1. 性能优化：
+
+- 虚拟化列表：对长列表进行虚拟化，只渲染可见区域内的列表项，以减少 DOM 元素数量和提高渲染性能。
+- 懒加载组件：延迟加载一部分组件，当组件需要渲染时再加载，以减少首次加载时间和提高性能。
+- Memoization 和 useMemo、useCallback：使用 Memoization 技术缓存计算结果，以避免重复计算，提高性能。使用 useMemo 和 useCallback 钩子来缓存计算结果和回调函数，以避免不必要的重新计算和重渲染。
+
+2. 代码优化：
+
+- 减少不必要的重新渲染：通过使用 PureComponent 或 React.memo 等优化手段来减少不必要的组件重新渲染。
+- 避免内联函数：避免在 render 方法中创建新的函数，将函数定义提取到组件外部或使用 useCallback 钩子来避免不必要的函数创建。
+- 避免不必要的状态更新：通过 shouldComponentUpdate 生命周期方法或 React.memo 来避免不必要的组件状态更新和重新渲染。
+
+3. 资源优化：
+
+- 图片优化：对图片进行压缩和懒加载，以减小图片大小和提高页面加载速度。
+- 代码分割和打包优化：使用 webpack 或其他打包工具来优化代码分割和打包，减小代码体积和提高加载速度。
+
+4. 网络请求优化：
+
+- 请求合并和缓存：合并多个请求或使用缓存来减少网络请求次数，提高页面加载速度和降低服务器压力。
+
+5. 浏览器优化：
+
+- 浏览器缓存：使用浏览器缓存技术来减少页面加载时间和提高性能。
+- 减少重绘和回流：通过合理的 CSS 布局和渲染优化来减少页面的重绘和回流，提高页面性能。
